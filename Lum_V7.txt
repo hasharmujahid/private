@@ -1,0 +1,910 @@
+Lum_V7.py
+
+
+import csv
+
+import time, multiprocessing
+
+from selenium import webdriver
+
+from webdriver_manager.chrome import ChromeDriverManager
+
+from selenium.webdriver.support.ui import WebDriverWait
+
+from selenium.webdriver.support import expected_conditions as EC
+
+from selenium.webdriver.common.by import By
+
+import os, datetime
+
+from selenium import webdriver
+
+from webdriver_manager.firefox import GeckoDriverManager
+
+from selenium import webdriver
+
+from selenium.webdriver.firefox.service import Service
+
+from webdriver_manager.firefox import GeckoDriverManager
+
+secret_key = "SBZURM2SJ5PZ4U6SDIPJNMULI6CSW46LTMEB3NRYY6SPE4DDXRC3UDMS"
+
+Top_coin = "USDC"
+
+Down_Coin = "XLM"
+
+
+# secret_key = input("enter secret_key : ")
+
+# Top_coin = input("enter the first coin that have balance : ")
+
+# Down_Coin = input("enter the second coin to swap : ")
+
+
+def main(browser, list):
+    print('UPPPPPP')
+
+    all_trades_cpt = 0
+    start_time_uploud = time.time()
+
+    while True:
+        cpt = 0
+        try:
+            for line in list:
+                browser.switch_to.window(browser.window_handles[cpt])
+
+                secret_key = line["secret_key"]
+
+                Top_coin = line["Top_coin"]
+
+                Down_Coin = line["Down_Coin"]
+
+                Amount = line["Amount"].replace("A", "")
+
+                cpt = cpt + 1
+                browser.get(f"https://amm.lumenswap.io/swap/{Top_coin}/{Down_Coin}")
+
+                def connect_to_wallet():
+                    element_present = EC.presence_of_element_located(
+
+                        (By.XPATH, '//*[@id="__next"]/div[1]/div/div[1]/div[1]/button'))
+
+                    WebDriverWait(browser, 10).until(element_present)
+
+                    # input("fdff")
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '//*[@id="__next"]/div[1]/div/div[1]/div[2]/div[1]/div[1]/button').click()
+
+                    element_present = EC.presence_of_element_located(
+
+                        (By.XPATH, '/html/body/div[3]/div/div/div/div/div/button[3]'))
+                    WebDriverWait(browser, 10).until(element_present)
+
+                    username = browser.find_element(By.XPATH, '/html/body/div[3]/div/div/div/div/div/button[3]').click()
+
+                    element_present = EC.presence_of_element_located(
+
+                        (By.XPATH, '/html/body/div[3]/div/div/div/div/form/div/input'))
+                    WebDriverWait(browser, 10).until(element_present)
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '/html/body/div[3]/div/div/div/div/form/div/input').send_keys(
+
+                        secret_key)
+
+                    # enter amount
+
+                    element_present = EC.presence_of_element_located(
+
+                        (By.XPATH, '/html/body/div[3]/div/div/div/div/form/button'))
+                    WebDriverWait(browser, 10).until(element_present)
+
+                    username = browser.find_element(By.XPATH, '/html/body/div[3]/div/div/div/div/form/button').click()
+
+                    # input("ddddd")
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '//*[@id="__next"]/div[1]/div/div[2]/div/form/div/div[1]/div[2]/input').send_keys(
+
+                        Amount)
+
+                connect_to_wallet()
+            while True:
+                try:
+                    if time.time() - start_time_uploud > 100:
+                        start_time_uploud = time.time()
+
+                        def update_output_sheet():
+
+                            import sqlite3
+
+                            # Connect to the SQLite database
+
+                            conn = sqlite3.connect('TRdatabase.db')
+
+                            cursor = conn.cursor()
+
+                            # Fetch all rows from the table
+
+                            cursor.execute("SELECT * FROM TR")
+
+                            rows = cursor.fetchall()
+
+                            def upload_to_google_sheet():
+                                import gspread
+
+                                print('5555555555555555555555555555555555555555555555555555555555')
+
+                                import requests, csv
+
+                                gc = gspread.service_account("googleapi.json")
+
+                                wks = gc.open('LUM_BOT').worksheet("output2")
+
+                                wks.clear()
+
+                                wks.append_row(["ID",
+
+                                                "secret_key",
+
+                                                "Top_coin",
+
+                                                "Down_Coin",
+
+                                                "trades",
+
+                                                "success",
+
+                                                "failed",
+
+                                                "date_update"])
+
+                                print("GET LIST FROM GOOGLE SHEET")
+
+                                print(wks.append_rows(rows))
+
+                            upload_to_google_sheet()
+
+                            # Display the rows
+
+                            for row in rows:
+                                print(row, "\n")
+
+                            # Close the connection
+
+                            conn.close()
+
+                        update_output_sheet()
+
+                    cpt = 0
+                    ID = 2
+                    for line in list:
+                        browser.switch_to.window(browser.window_handles[cpt])
+                        try:
+                            faied_or_socess = browser.find_element(By.XPATH,
+
+                                                                   '/html/body/div[3]/div/div/div/div/div/h2').text
+                            print(faied_or_socess)
+
+                            def add_one_to_Success():
+
+                                import sqlite3
+
+                                # Connect to the SQLite database
+
+                                conn = sqlite3.connect('TRdatabase.db')
+
+                                cursor = conn.cursor()
+
+                                # Get the current 'success' value for the specific 'secret_key'
+
+                                cursor.execute(f"""
+
+                                                             SELECT success
+
+                                                             FROM TR
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+
+                                current_success_value = int(cursor.fetchone()[0])
+
+                                # Calculate the new 'success' value by incrementing the current value by one
+
+                                new_success_value = current_success_value + 1
+
+                                # Update the 'success' column with the new value
+
+                                cursor.execute(f"""
+
+                                                             UPDATE TR
+
+                                                             SET success = {new_success_value} ,
+
+                                                              trades = {all_trades_cpt} 
+
+
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+
+                                # Commit the changes and close the connection
+
+                                conn.commit()
+
+                                conn.close()
+
+                            def add_one_to_Failed():
+
+                                import sqlite3
+
+                                # Connect to the SQLite database
+
+                                conn = sqlite3.connect('TRdatabase.db')
+
+                                cursor = conn.cursor()
+                                print(f"""
+
+                                                             SELECT failed
+
+                                                             FROM TR
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+
+                                # Get the current 'success' value for the specific 'secret_key'
+
+                                cursor.execute(f"""
+
+                                                             SELECT failed
+
+                                                             FROM TR
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+
+                                current_success_value = int(cursor.fetchone()[0])
+
+                                # Calculate the new 'success' value by incrementing the current value by one
+
+                                new_success_value = current_success_value + 1
+
+                                # Update the 'success' column with the new value
+                                print(f"""
+
+                                                             UPDATE TR
+
+                                                             SET failed = {new_success_value} ,
+
+                                                              trades = {all_trades_cpt}
+
+
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+                                cursor.execute(f"""
+
+                                                             UPDATE TR
+
+                                                             SET failed = {new_success_value} ,
+
+                                                              trades = {all_trades_cpt}
+
+
+
+                                                             WHERE ID = {ID}
+
+                                                         """)
+
+                                # Commit the changes and close the connection
+
+                                conn.commit()
+
+                                conn.close()
+
+                            if faied_or_socess.find("Success") != -1:
+                                print(
+                                    '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                                add_one_to_Success()
+                                carwa = browser.find_element(By.XPATH,
+
+                                                             '//button[@class="icon-multiply styles_close__XcREh"]').click()
+
+                                print(
+                                    '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                            all_trades_cpt = 0
+
+                            if faied_or_socess.find("Failed") != -1:
+                                print(
+                                    '------------------------------------------------------------------------------------------')
+
+                                add_one_to_Failed()
+                                print(
+                                    '------------------------------------------------------------------------------------------')
+
+                                carwa = browser.find_element(By.XPATH,
+
+                                                             '//button[@class="icon-multiply styles_close__XcREh"]').click()
+                                # class="icon-multiply styles_close__XcREh"
+
+
+                        except Exception as err:
+                            print(err)
+                        try:
+                            open_login_1 = browser.find_element(By.XPATH,
+
+                                                                '/html/body/div[3]/div/div/div/div/div/div[3]/button').click()
+                        except Exception as err:
+                            print(err)
+
+                        try:
+                            open_login_1 = browser.find_element(By.XPATH,
+
+                                                                '/html/body/div/div[1]/div/div[2]/div/form/div[1]/button').click()
+                        except Exception as err:
+                            print(err)
+
+                        secret_key = line["secret_key"]
+
+                        Top_coin = line["Top_coin"]
+
+                        Down_Coin = line["Down_Coin"]
+
+                        Amount = line["Amount"].replace("A", "")
+
+                        cpt = cpt + 1
+                        ID = cpt + 2
+
+                        def write_amount():
+
+                            element_present = EC.presence_of_element_located(
+
+                                (By.XPATH, '//*[@id="__next"]/div[1]/div/div[2]/div/form/div/div[1]/div[2]/input'))
+                            WebDriverWait(browser, 10).until(element_present)
+                            print(1)
+
+                            # input("ddddd")
+                            open_login_1 = browser.find_element(By.XPATH,
+
+                                                                '//*[@id="__next"]/div[1]/div/div[2]/div/form/div/div[1]/div[2]/input').clear()
+                            print(2)
+
+                            open_login_1 = browser.find_element(By.XPATH,
+
+                                                                '//*[@id="__next"]/div[1]/div/div[2]/div/form/div/div[1]/div[2]/input').send_keys(
+
+                                Amount)
+                            print(3)
+
+                        write_amount()
+
+                except Exception as err:
+                    print(err)
+
+        except Exception as err:
+            browser.switch_to.window(browser.window_handles[0])
+
+            print(err)
+
+            '''try:
+
+                all_trades_cpt += 1
+
+                # print("TO HIDE THE BROWSER ENTER YES IN headless.txt")
+
+
+                try:
+
+                    element_present = EC.presence_of_element_located(
+
+                        (By.XPATH, '//*[@id="__next"]/div[1]/div/div[1]/div[1]/button'))
+
+                    WebDriverWait(browser, 10).until(element_present)
+
+                    browser.implicitly_wait(2)
+
+                    # input("fdff")
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '//*[@id="__next"]/div[1]/div/div[1]/div[2]/div[1]/div[1]/button').click()
+
+                    browser.implicitly_wait(2)
+
+                    username = browser.find_element(By.XPATH, '/html/body/div[3]/div/div/div/div/div/button[3]').click()
+
+                    browser.implicitly_wait(2)
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '/html/body/div[3]/div/div/div/div/form/div/input').send_keys(
+
+                        secret_key)
+
+                    browser.implicitly_wait(2)
+
+                    username = browser.find_element(By.XPATH, '/html/body/div[3]/div/div/div/div/form/button').click()
+
+                    browser.implicitly_wait(2)
+
+                    # input("ddddd")
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '//*[@id="__next"]/div[1]/div/div[2]/div/form/div/div[1]/div[2]/input').send_keys(
+
+                        Amount)
+
+                    time.sleep(2)
+
+                    username = browser.find_element(By.XPATH,
+
+                                                    '//*[@id="__next"]/div[1]/div/div[2]/div/form/div[1]/button').click()
+
+                    time.sleep(3)
+
+                    username = browser.find_element(By.XPATH, '/html/body/div[3]/div/div/div/div/div/div[3]/button').click()
+
+                    time.sleep(18)
+
+                    open_login_1 = browser.find_element(By.XPATH,
+
+                                                        '/html/body/div[3]/div/div/div/div/div/h2').text
+
+                    print(open_login_1)
+
+                    def add_one_to_Success():
+
+                        import sqlite3
+
+                        # Connect to the SQLite database
+
+                        conn = sqlite3.connect('TRdatabase.db')
+
+                        cursor = conn.cursor()
+
+                        # Get the current 'success' value for the specific 'secret_key'
+
+                        cursor.execute(f"""
+
+                            SELECT success
+
+                            FROM TR
+
+                            WHERE ID = {ID}
+
+                        """)
+
+                        current_success_value = int(cursor.fetchone()[0])
+
+                        # Calculate the new 'success' value by incrementing the current value by one
+
+                        new_success_value = current_success_value + 1
+
+                        # Update the 'success' column with the new value
+
+                        cursor.execute(f"""
+
+                            UPDATE TR
+
+                            SET success = {new_success_value} ,
+
+                             trades = {all_trades_cpt} 
+
+
+
+                            WHERE ID = {ID}
+
+                        """)
+
+                        # Commit the changes and close the connection
+
+                        conn.commit()
+
+                        conn.close()
+
+                    def add_one_to_Failed():
+
+                        import sqlite3
+
+                        # Connect to the SQLite database
+
+                        conn = sqlite3.connect('TRdatabase.db')
+
+                        cursor = conn.cursor()
+
+                        # Get the current 'success' value for the specific 'secret_key'
+
+                        cursor.execute(f"""
+
+                            SELECT failed
+
+                            FROM TR
+
+                            WHERE ID = {ID}
+
+                        """)
+
+                        current_success_value = int(cursor.fetchone()[0])
+
+                        # Calculate the new 'success' value by incrementing the current value by one
+
+                        new_success_value = current_success_value + 1
+
+                        # Update the 'success' column with the new value
+
+                        cursor.execute(f"""
+
+                            UPDATE TR
+
+                            SET failed = {new_success_value} ,
+
+                             trades = {all_trades_cpt}
+
+
+
+                            WHERE ID = {ID}
+
+                        """)
+
+                        # Commit the changes and close the connection
+
+                        conn.commit()
+
+                        conn.close()
+
+                    if open_login_1.find("Success") != -1:
+                        add_one_to_Success()
+
+                        print(
+                            '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+                    if open_login_1.find("Failed") != -1:
+                        add_one_to_Failed()
+
+                    browser.delete_all_cookies()
+
+
+
+                except Exception as err:
+
+                    def add_one_to_trade():
+
+                        import sqlite3
+
+                        # Connect to the SQLite database
+
+                        conn = sqlite3.connect('TRdatabase.db')
+
+                        cursor = conn.cursor()
+
+                        # Get the current 'success' value for the specific 'secret_key'
+
+                        # Update the 'success' column with the new value
+
+                        cursor.execute(f"""
+
+                            UPDATE TR
+
+                            SET trades = {all_trades_cpt}
+
+
+
+                            WHERE ID = {ID}
+
+                        """)
+
+                        # Commit the changes and close the connection
+
+                        conn.commit()
+
+                        conn.close()
+
+                    add_one_to_trade()
+
+
+
+
+
+
+
+
+
+
+
+            except Exception as err:
+
+                print(err)
+
+                time.sleep(4)
+
+                browser.refresh()
+
+                browser.delete_all_cookies()
+
+                time.sleep(4)
+
+                pass'''
+
+        print("BOT  IS OFF")
+
+input_sheet_num  = input('eneter sheet number : ')
+def upload_to_google_sheet():
+    import gspread
+
+    print('5555555555555555555555555555555555555555555555555555555555')
+
+    import requests, csv
+
+    gc = gspread.service_account("googleapi.json")
+
+    wks = gc.open('LUM_BOT').worksheet(input_sheet_num)
+
+    print("GET LIST FROM GOOGLE SHEET")
+
+    print(wks.get_all_records())
+    print(len(wks.get_all_records()))
+
+    return wks.get_all_records()
+
+
+def make_DB():
+    print("++++++++++++++++++++")
+
+    import sqlite3
+
+    # Connect to the SQLite database (creates a new one if not existing)
+
+    conn = sqlite3.connect('TRdatabase.db')
+
+    cursor = conn.cursor()
+
+    # Drop the table if it already exists
+
+    cursor.execute("DROP TABLE IF EXISTS TR")
+
+    # Create the table
+
+    cursor.execute("""
+
+                    CREATE TABLE TR (
+
+                        ID INTEGER,
+
+                        secret_key TEXT,
+
+                        Top_coin TEXT,
+
+                        Down_Coin TEXT,
+
+                        trades INTEGER,
+
+                        success INTEGER,
+
+                        failed INTEGER , 
+
+                        date_update TEXT
+
+                    )
+
+                """)
+
+    # Commit the changes and close the connection
+
+    conn.commit()
+
+    conn.close()
+
+
+if __name__ == "__main__":
+
+    try:
+
+        make_DB()
+
+        print('--------------------------')
+
+        list_from_google_sheet = (upload_to_google_sheet())
+
+        cpt = 1
+        firefox_options = webdriver.FirefoxOptions()
+
+        # firefox_options.add_argument("--disable-extensions")
+
+        # firefox_options.add_argument("--disable-gpu")
+
+        # firefox_options.add_argument("--no-sandbox") # linux only
+
+        # firefox_options.add_argument("--incognito")
+
+        # firefox_options.headless = True
+
+        # firefox_options.add_argument("--window-size=500,1000")
+
+        # firefox_options.add_argument("--incognito")
+
+        service = Service(executable_path=GeckoDriverManager().install())
+
+        # Create Firefox profile with low power settings
+        # firefox_options.set_preference("dom.popup_maximum", 100)
+        firefox_options.set_preference("toolkit.cosmeticAnimations.enabled", False)
+        firefox_options.set_preference("signon.rememberSignons", False)
+
+        firefox_options.add_argument("-new-tab")  # Add this argument to allow opening new tabs
+
+        # Create Firefox options and set the profile
+
+        firefox_options.headless = True  # Run Firefox in headless mode for better performance
+
+        browser = webdriver.Firefox(service=service, options=firefox_options)
+
+        browser.set_window_position(0, 0)
+
+        # Launch Firefox with the specified options and profile
+        from selenium.webdriver.common.keys import Keys
+
+        browser.set_window_size(500, 800)
+        browser.get("https://www.example.com")
+
+        for line in list_from_google_sheet:
+            cpt += 1
+
+            print(cpt)
+
+            secret_key = line["secret_key"]
+
+            Top_coin = line["Top_coin"]
+
+            Down_Coin = line["Down_Coin"]
+
+            Amount = line["Amount"].replace("A", "")
+            browser.execute_script("window.open('','_blank');")
+
+            browser.get("https://www.example.com")
+
+
+            def new_row_add():
+                import sqlite3
+
+                # Connect to the SQLite database
+
+                conn = sqlite3.connect('TRdatabase.db')
+
+                cursor = conn.cursor()
+
+                # Insert a new row into the table
+
+                last_update = str(datetime.datetime.now())
+
+                data = (cpt, secret_key, Top_coin, Down_Coin, 0, 0, 0, last_update)
+
+                cursor.execute("""
+
+                    INSERT INTO TR (ID , secret_key, Top_coin, Down_Coin, trades, success, failed , date_update)
+
+                    VALUES (?, ?, ?, ?, ?, ?,?, ?)
+
+                """, data)
+
+                print(("""
+
+                    INSERT INTO TR (ID , secret_key, Top_coin, Down_Coin, trades, success, failed , date_update)
+
+                    VALUES (?, ?, ?, ?, ?, ?,?, ?)
+
+                """, data))
+
+                print('doneeeneeeeeeeeeeeeeeeeeee')
+
+                # Commit the changes and close the connection
+
+                conn.commit()
+
+                conn.close()
+
+
+            new_row_add()
+
+            time.sleep(0.1)
+
+        print(" PRESS ENTER TO CLOSE ")
+        main(browser, list_from_google_sheet)
+
+        while True:
+
+            try:
+
+                def update_output_sheet():
+
+                    import sqlite3
+
+                    # Connect to the SQLite database
+
+                    conn = sqlite3.connect('TRdatabase.db')
+
+                    cursor = conn.cursor()
+
+                    # Fetch all rows from the table
+
+                    cursor.execute("SELECT * FROM TR")
+
+                    rows = cursor.fetchall()
+
+                    def upload_to_google_sheet():
+                        import gspread
+
+                        print('5555555555555555555555555555555555555555555555555555555555')
+
+                        import requests, csv
+
+                        gc = gspread.service_account("googleapi.json")
+
+                        wks = gc.open('LUM_BOT').worksheet("output2")
+
+                        wks.clear()
+
+                        wks.append_row(["ID",
+
+                                        "secret_key",
+
+                                        "Top_coin",
+
+                                        "Down_Coin",
+
+                                        "trades",
+
+                                        "success",
+
+                                        "failed",
+
+                                        "date_update"])
+
+                        print("GET LIST FROM GOOGLE SHEET")
+
+                        print(wks.append_rows(rows))
+
+                    upload_to_google_sheet()
+
+                    # Display the rows
+
+                    for row in rows:
+                        print(row, "\n")
+
+                    # Close the connection
+
+                    conn.close()
+
+
+                update_output_sheet()
+
+
+            except Exception as err:
+
+                print(err)
+
+
+
+
+
+    finally:
+
+        browser.quit()
+
+        print("done")
+
+
+
+
+
+
+
+
