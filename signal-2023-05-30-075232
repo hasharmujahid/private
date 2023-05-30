@@ -1,0 +1,92 @@
+TboT market maker
+
+
+import time
+from stellar_sdk import Server, TransactionBuilder, Network, Keypair, Asset
+
+# Stellar Horizon API endpoint
+HORIZON_URL = "https://horizon.stellar.org"
+
+# Wallet secret key for source and destination accounts
+SOURCE_SECRET_KEY = input("Enter the secret key of the source account: ")
+DESTINATION_SECRET_KEY = input("Enter the secret key of the destination account: ")
+
+# Asset details for the send asset
+SEND_ASSET_CODE = input("Enter the asset code to send: ")
+SEND_ASSET_ISSUER = input("Enter the public key of the send asset issuer: ")
+
+# Asset details for the five assets
+ASSET_DETAILS = []
+for i in range(5):
+    asset_code = input(f"Enter the asset code for asset {i+1}: ")
+    asset_issuer = input(f"Enter the public key of the issuer for asset {i+1}: ")
+    ASSET_DETAILS.append((asset_code, asset_issuer))
+
+# Stellar server instance
+server = Server(HORIZON_URL)
+
+# Stellar network passphrase
+network_passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
+
+# Main application loop
+while True:
+    try:
+        # Fetch the account details for the source and destination accounts
+        source_keypair = Keypair.from_secret(SOURCE_SECRET_KEY)
+        source_account = server.load_account(source_keypair.public_key)
+
+        destination_keypair = Keypair.from_secret(DESTINATION_SECRET_KEY)
+        destination_account = server.load_account(destination_keypair.public_key)
+
+        # Initialize variables to track the best exchange rate and asset
+        best_exchange_rate = 0.0
+        best_asset_code = ""
+        best_asset_issuer = ""
+
+        # Iterate over the five assets and find the best exchange rate
+        for asset_code, asset_issuer in ASSET_DETAILS:
+            # Fetch the paths for the exchange
+            paths = server.paths(
+                source_asset=Asset(SEND_ASSET_CODE, SEND_ASSET_ISSUER),
+                source_amount=100,  # Amount to send (can be adjusted as needed)
+                destination_asset=Asset(asset_code, asset_issuer),
+                destination_amount=1,  # Arbitrary amount for rate calculation
+                destination_account=destination_keypair.public_key,
+                limit=1,
+            ).call()
+
+            if len(paths["_embedded"]["records"]) > 0:
+                rate = 100 / float(paths["_embedded"]["records"][0]["destination_amount"])
+                if rate > best_exchange_rate:
+                    best_exchange_rate = rate
+                    best_asset_code = asset_code
+                    best_asset_issuer = asset_issuer
+
+        if best_exchange_rate > 0.0:
+            # Build the transaction for the best exchange rate
+            transaction = (
+                TransactionBuilder(
+                    source_account=source_account,
+                    network_passphrase=network_passphrase,
+                    base_fee=100
+                )
+                .append_path_payment_strict_send_op(
+                    send_code=SEND_ASSET_CODE,
+                    send_issuer=SEND_ASSET_ISSUER,
+                    send_amount=100,  # Amount to send (can be adjusted as needed)
+                    dest_code=best_asset_code,
+                    dest_issuer=best_asset_issuer,
+                    dest_min=best_exchange_rate  # Minimum acceptable receive amount
+                )
+                .set_timeout(30)
+                .build()
+            )
+
+            # Sign the transaction
+            transaction.sign(source_keypair)
+
+            # Submit the transaction to the network
+            response = server.submit_transaction(transaction)
+
+            # Print transaction details
+            print(f"Transaction successful! Hash: {response['hash']}")
